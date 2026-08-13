@@ -1,0 +1,353 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { useAuth } from '../contexts/AuthContext';
+import { Job, Part } from '../types';
+import { ArrowLeft, Plus, Trash2, Camera, X } from 'lucide-react';
+import { format } from 'date-fns';
+import { compressImage } from '../lib/imageUtils';
+
+export default function JobDetail() {
+  const { id } = useParams<{ id: string }>();
+  const { profile } = useAuth();
+  const navigate = useNavigate();
+  const [job, setJob] = useState<Job | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  
+  const [newPart, setNewPart] = useState<Part>({ name: '', cost: 0, quantity: 1 });
+
+  useEffect(() => {
+    const fetchJob = async () => {
+      if (!id) return;
+      try {
+        const docRef = doc(db, 'jobs', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setJob({ id: docSnap.id, ...docSnap.data() } as Job);
+        } else {
+          navigate('/jobs');
+        }
+      } catch (error) {
+        console.error("Error fetching job", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchJob();
+  }, [id, navigate]);
+
+  const handleUpdate = async (field: keyof Job, value: any) => {
+    if (!job || !id) return;
+    setSaving(true);
+    try {
+      const docRef = doc(db, 'jobs', id);
+      await updateDoc(docRef, { [field]: value, updatedAt: Date.now() });
+      setJob(prev => prev ? { ...prev, [field]: value } : null);
+    } catch (error) {
+      console.error("Error updating job", error);
+      alert("Update failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addPart = async () => {
+    if (!job || !id || !newPart.name) return;
+    const updatedParts = [...job.partsUsed, newPart];
+    await handleUpdate('partsUsed', updatedParts);
+    setNewPart({ name: '', cost: 0, quantity: 1 });
+  };
+
+  const removePart = async (index: number) => {
+    if (!job || !id) return;
+    const updatedParts = job.partsUsed.filter((_, i) => i !== index);
+    await handleUpdate('partsUsed', updatedParts);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!job || !id || !file) return;
+    
+    setUploadingImage(true);
+    try {
+      const base64Str = await compressImage(file);
+      const updatedPhotos = [...job.photos, base64Str];
+      await handleUpdate('photos', updatedPhotos);
+    } catch (error) {
+      console.error("Error compressing image:", error);
+      alert("Failed to process image.");
+    } finally {
+      setUploadingImage(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!id || !window.confirm("Are you sure you want to delete this job?")) return;
+    try {
+      await deleteDoc(doc(db, 'jobs', id));
+      navigate('/jobs');
+    } catch (error) {
+      console.error("Delete failed", error);
+    }
+  };
+
+  if (loading) return <div>Loading...</div>;
+  if (!job) return <div>Job not found</div>;
+
+  const canEdit = profile?.role === 'admin' || job.technicianId === profile?.id;
+  const totalCost = job.partsUsed.reduce((sum, part) => sum + (part.cost * part.quantity), 0);
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Link to="/jobs" className="p-2 bg-slate-100 hover:bg-slate-200 rounded transition-colors">
+              <ArrowLeft className="w-5 h-5 text-slate-600" />
+            </Link>
+            <div>
+              <div className="text-xs font-mono text-slate-400 mb-1 tracking-widest">JOB DETAIL • #{job.id.slice(0, 8).toUpperCase()}</div>
+              <h1 className="text-2xl font-bold text-slate-900 leading-tight">{job.title}</h1>
+            </div>
+          </div>
+          {profile?.role === 'admin' && (
+            <button onClick={handleDelete} className="text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2 rounded text-xs font-bold shadow-sm transition-colors">
+              <Trash2 className="w-4 h-4 inline mr-1" /> Delete Job
+            </button>
+          )}
+        </div>
+
+        <div className="flex-1 p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+
+          <div className="space-y-6">
+            <div>
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Equipment Metadata</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 p-3 rounded">
+                  <p className="text-[10px] text-slate-400 uppercase">Equipment ID</p>
+                  <p className="text-sm font-bold text-slate-800">{job.equipment}</p>
+                </div>
+                <div className="bg-slate-50 p-3 rounded">
+                  <p className="text-[10px] text-slate-400 uppercase">Location</p>
+                  <p className="text-sm font-bold text-slate-800">{job.location}</p>
+                </div>
+                <div className="bg-slate-50 p-3 rounded">
+                  <p className="text-[10px] text-slate-400 uppercase">Technician</p>
+                  <p className="text-sm font-bold text-slate-800">{job.technicianName}</p>
+                </div>
+                <div className="bg-slate-50 p-3 rounded">
+                  <p className="text-[10px] text-slate-400 uppercase">Date Logged</p>
+                  <p className="text-sm font-bold text-slate-800">{format(job.date, 'MMM d, yyyy')}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Notes & Description</h4>
+              <div className="space-y-3">
+                <div className="border-l-2 border-slate-200 pl-4 py-1">
+                  <p className="text-[11px] text-slate-400 font-bold uppercase mb-1">ISSUE REPORTED</p>
+                  <p className="text-sm text-slate-600 whitespace-pre-wrap">{job.description}</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Resolution Notes</h4>
+              {canEdit ? (
+                <textarea
+                  value={job.resolutionNotes}
+                  onChange={(e) => setJob({...job, resolutionNotes: e.target.value})}
+                  onBlur={(e) => handleUpdate('resolutionNotes', e.target.value)}
+                  rows={4}
+                  placeholder="Add diagnostic and resolution notes..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+                />
+              ) : (
+                <div className="border-l-2 border-slate-200 pl-4 py-1">
+                  <p className="text-sm text-slate-600 whitespace-pre-wrap">{job.resolutionNotes || 'No notes yet.'}</p>
+                </div>
+              )}
+            </div>
+            
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Status Control</h4>
+              {canEdit ? (
+                <select
+                  value={job.status}
+                  onChange={(e) => handleUpdate('status', e.target.value)}
+                  className={`w-full bg-slate-100 border-none rounded px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-bold uppercase tracking-wider
+                    ${job.status === 'completed' ? 'text-emerald-700 bg-emerald-50' : 
+                      job.status === 'in_progress' ? 'text-blue-700 bg-blue-50' : 
+                      'text-amber-700 bg-amber-50'}
+                  `}
+                >
+                  <option value="pending">PENDING</option>
+                  <option value="in_progress">IN PROGRESS</option>
+                  <option value="completed">COMPLETED</option>
+                </select>
+              ) : (
+                <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase w-max
+                  ${job.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 
+                    job.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 
+                    'bg-amber-100 text-amber-700'}
+                `}>
+                  {job.status.replace('_', ' ')}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Parts Consumed</h4>
+              
+              <table className="w-full text-left text-sm mb-4">
+                <thead>
+                  <tr className="text-[10px] text-slate-400 border-b border-slate-100">
+                    <th className="pb-2 font-bold">ITEM</th>
+                    <th className="pb-2 text-right font-bold">QTY</th>
+                    <th className="pb-2 text-right font-bold">COST</th>
+                    {canEdit && <th className="pb-2"></th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {job.partsUsed.map((part, index) => (
+                    <tr key={index} className="border-b border-slate-50">
+                      <td className="py-2 font-medium text-slate-800">{part.name}</td>
+                      <td className="py-2 text-right text-slate-600">{part.quantity}</td>
+                      <td className="py-2 text-right text-slate-600">${(part.cost * part.quantity).toFixed(2)}</td>
+                      {canEdit && (
+                        <td className="py-2 text-right">
+                          <button onClick={() => removePart(index)} className="text-red-500 hover:text-red-700">
+                            <Trash2 className="w-4 h-4 ml-auto" />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              {job.partsUsed.length > 0 && (
+                <div className="flex justify-end text-sm font-bold text-slate-800 mb-4">
+                  Total Parts: ${totalCost.toFixed(2)}
+                </div>
+              )}
+              {job.partsUsed.length === 0 && <p className="text-sm text-slate-500 mb-4">No parts recorded.</p>}
+
+              {canEdit && (
+                <div className="flex gap-2 pt-4 border-t border-slate-100">
+                  <input 
+                    type="text" 
+                    placeholder="Part name" 
+                    value={newPart.name} 
+                    onChange={e => setNewPart({...newPart, name: e.target.value})}
+                    className="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded"
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="Cost" 
+                    value={newPart.cost || ''} 
+                    onChange={e => setNewPart({...newPart, cost: Number(e.target.value)})}
+                    className="w-24 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded"
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="Qty" 
+                    value={newPart.quantity || ''} 
+                    onChange={e => setNewPart({...newPart, quantity: Number(e.target.value)})}
+                    className="w-16 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded"
+                  />
+                  <button onClick={addPart} className="bg-blue-100 text-blue-700 p-2 rounded hover:bg-blue-200">
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Attachments</h4>
+              <div className="grid grid-cols-3 gap-2">
+                {job.photos.map((url, index) => (
+                  <div 
+                    key={index} 
+                    className="relative aspect-square bg-slate-200 rounded-md border border-slate-300 flex items-center justify-center overflow-hidden group cursor-pointer"
+                    onClick={() => setSelectedImage(url)}
+                  >
+                    <img src={url} alt={`Job ${index}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  </div>
+                ))}
+              </div>
+              
+              {job.photos.length === 0 && <p className="text-sm text-slate-500 mt-2">No photos attached.</p>}
+
+              {canEdit && (
+                <div className="mt-4 flex items-center gap-2">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    capture="environment"
+                    id="camera-upload-detail"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <label 
+                    htmlFor="camera-upload-detail"
+                    className={`bg-slate-50 border border-slate-200 text-slate-700 px-4 py-3 rounded hover:bg-slate-100 cursor-pointer flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors w-full border-dashed ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    <Camera className="w-4 h-4" /> 
+                    {uploadingImage ? 'Processing Image...' : 'Take or Upload Photo'}
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+          <div className="flex gap-4 text-xs text-slate-500 font-medium uppercase">
+            <span>Created: {format(job.createdAt, 'MMM d, HH:mm')}</span>
+            <span>Updated: {format(job.updatedAt, 'MMM d, HH:mm')}</span>
+          </div>
+          <div className="flex gap-2">
+            {canEdit && job.status !== 'completed' && (
+              <button 
+                onClick={() => handleUpdate('status', 'completed')}
+                className="bg-emerald-600 text-white px-4 py-2 rounded text-xs font-bold shadow-sm hover:bg-emerald-700"
+              >
+                Mark as Resolved
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Fullscreen Image Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 z-50 bg-slate-900/95 flex items-center justify-center p-4 sm:p-8 backdrop-blur-sm"
+          onClick={() => setSelectedImage(null)}
+        >
+          <button 
+            className="absolute top-4 right-4 sm:top-8 sm:right-8 text-white/70 hover:text-white p-2 transition-colors rounded-full hover:bg-white/10"
+            onClick={() => setSelectedImage(null)}
+          >
+            <X className="w-8 h-8 sm:w-10 sm:h-10" />
+          </button>
+          <img 
+            src={selectedImage} 
+            alt="Expanded view" 
+            className="max-w-full max-h-full object-contain rounded-md shadow-2xl"
+            onClick={(e) => e.stopPropagation()} 
+          />
+        </div>
+      )}
+    </div>
+  );
+}

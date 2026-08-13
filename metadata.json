@@ -1,0 +1,8 @@
+{
+  "name": "RepairLog Pro",
+  "description": "Technician repair job history logging and management application with role-based access.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
