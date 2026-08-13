@@ -4,7 +4,7 @@ import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Job, Part } from '../types';
-import { ArrowLeft, Plus, Trash2, Camera, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Camera, X, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { compressImage } from '../lib/imageUtils';
 
@@ -86,13 +86,23 @@ export default function JobDetail() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!id || !window.confirm("Are you sure you want to delete this job?")) return;
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!id) return;
+    setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'jobs', id));
       navigate('/jobs');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Delete failed", error);
+      alert("Failed to delete job: " + error.message);
+      setIsDeleting(false);
     }
   };
 
@@ -115,11 +125,21 @@ export default function JobDetail() {
               <h1 className="text-2xl font-bold text-slate-900 leading-tight">{job.title}</h1>
             </div>
           </div>
-          {profile?.role === 'admin' && (
-            <button onClick={handleDelete} className="text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2 rounded text-xs font-bold shadow-sm transition-colors">
-              <Trash2 className="w-4 h-4 inline mr-1" /> Delete Job
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {canEdit && (
+              <Link 
+                to={`/jobs/${job.id}/edit`} 
+                className="text-slate-600 bg-slate-50 hover:bg-slate-100 px-4 py-2 rounded text-xs font-bold shadow-sm transition-colors border border-slate-200"
+              >
+                <Edit className="w-4 h-4 inline mr-1" /> Edit Job
+              </Link>
+            )}
+            {canEdit && (
+              <button onClick={handleDeleteClick} className="text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2 rounded text-xs font-bold shadow-sm transition-colors border border-red-100">
+                <Trash2 className="w-4 h-4 inline mr-1" /> Delete Job
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -346,6 +366,36 @@ export default function JobDetail() {
             className="max-w-full max-h-full object-contain rounded-md shadow-2xl"
             onClick={(e) => e.stopPropagation()} 
           />
+        </div>
+      )}
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 text-center animate-in fade-in zoom-in duration-200">
+            <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Delete this job?</h3>
+            <p className="text-slate-500 mb-6 text-sm">
+              Are you sure you want to delete this job? This action cannot be undone.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button 
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-sm transition-colors"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-sm transition-colors flex items-center justify-center disabled:opacity-50"
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

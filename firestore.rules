@@ -31,9 +31,12 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (
         isAdmin() || 
         // Technician can update if they are assigned to it or created it
-        (isTechnician() && (resource.data.technicianId == request.auth.uid || resource.data.createdBy == request.auth.uid))
+        (isTechnician() && (resource.data.get('technicianId', '') == request.auth.uid || resource.data.get('createdBy', '') == request.auth.uid))
       );
-      allow delete: if isAdmin();
+      allow delete: if isAuthenticated() && (
+        isAdmin() || 
+        (isTechnician() && (resource.data.get('technicianId', '') == request.auth.uid || resource.data.get('createdBy', '') == request.auth.uid))
+      );
     }
   }
 }

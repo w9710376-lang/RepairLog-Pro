@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { initializeFirestore } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 
 const firebaseConfig = {
   projectId: "macro-stage-rt8c4",
@@ -13,5 +13,8 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = initializeFirestore(app, { experimentalForceLongPolling: true }, "ai-studio-09e15c90-6482-4020-95f6-be256a50954c");
+export const db = initializeFirestore(app, { 
+  experimentalForceLongPolling: true,
+  localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+}, "ai-studio-09e15c90-6482-4020-95f6-be256a50954c");
 export const googleProvider = new GoogleAuthProvider();

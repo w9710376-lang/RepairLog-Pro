@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import JobsList from './pages/JobsList';
 import JobDetail from './pages/JobDetail';
 import JobCreate from './pages/JobCreate';
+import JobEdit from './pages/JobEdit';
 import Reports from './pages/Reports';
 
 function PrivateRoute({ children, requireAdmin = false }: { children: React.ReactNode, requireAdmin?: boolean }) {
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="jobs" element={<JobsList />} />
             <Route path="jobs/new" element={<JobCreate />} />
             <Route path="jobs/:id" element={<JobDetail />} />
+            <Route path="jobs/:id/edit" element={<JobEdit />} />
             <Route path="reports" element={<PrivateRoute requireAdmin><Reports /></PrivateRoute>} />
           </Route>
         </Routes>
