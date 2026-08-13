@@ -3,28 +3,75 @@ import { useNavigate } from 'react-router-dom';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { Job, JobStatus } from '../types';
-import { ArrowLeft, Plus, Trash2, Camera, X } from 'lucide-react';
+import { Job, JobStatus, JobAttachment } from '../types';
+import { ArrowLeft, Plus, Trash2, Camera, X, Paperclip, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { compressImage } from '../lib/imageUtils';
+import { format } from 'date-fns';
 
 export default function JobCreate() {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<JobAttachment[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     equipment: '',
     location: '',
     status: 'pending' as JobStatus,
+    date: format(new Date(), 'yyyy-MM-dd'),
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const handleDocumentChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 800 * 1024) {
+      alert("File is too large. Maximum size is 800KB for offline-first documents.");
+      e.target.value = '';
+      return;
+    }
+    
+    setUploadingDoc(true);
+    try {
+      const base64Str = await fileToBase64(file);
+      const newAttachment = {
+        id: Date.now().toString(),
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        size: file.size,
+        data: base64Str
+      };
+      setAttachments(prev => [...prev, newAttachment]);
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      alert("Failed to process document.");
+    } finally {
+      setUploadingDoc(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveDocument = (index: number) => {
+    setAttachments(attachments.filter((_, i) => i !== index));
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,12 +101,22 @@ export default function JobCreate() {
     setLoading(true);
 
     try {
+      const parsedDate = new Date(formData.date);
+      // add current time to the date so it's not midnight UTC
+      const now = new Date();
+      parsedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+      
       const newJob: Omit<Job, 'id'> = {
-        ...formData,
-        date: Date.now(),
+        title: formData.title,
+        description: formData.description,
+        equipment: formData.equipment,
+        location: formData.location,
+        status: formData.status,
+        date: parsedDate.getTime(),
         technicianId: profile.id,
         technicianName: profile.name,
         photos: photos,
+        attachments: attachments,
         partsUsed: [],
         resolutionNotes: '',
         createdBy: profile.id,
@@ -117,18 +174,33 @@ export default function JobCreate() {
               />
             </div>
 
-            <div>
-              <label htmlFor="location" className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Location / Site</label>
-              <input
-                type="text"
-                id="location"
-                name="location"
-                required
-                value={formData.location}
-                onChange={handleChange}
-                className="w-full px-4 py-2 bg-slate-100 border-none rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="e.g. Building 4, Roof"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="location" className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Location / Site</label>
+                <input
+                  type="text"
+                  id="location"
+                  name="location"
+                  required
+                  value={formData.location}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 bg-slate-100 border-none rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="e.g. Building 4, Roof"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="date" className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Date Logged</label>
+                <input
+                  type="date"
+                  id="date"
+                  name="date"
+                  required
+                  value={formData.date}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 bg-slate-100 border-none rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
             </div>
 
             <div>
@@ -161,8 +233,9 @@ export default function JobCreate() {
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Job Photos</label>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Attachments</label>
               
+              {/* Image Grid */}
               {photos.length > 0 && (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-4">
                   {photos.map((url, index) => (
@@ -183,23 +256,70 @@ export default function JobCreate() {
                   ))}
                 </div>
               )}
+
+              {/* Document List */}
+              {attachments.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  {attachments.map((doc, index) => (
+                    <div 
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg group"
+                    >
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="bg-blue-100 text-blue-600 p-2 rounded-md shrink-0">
+                          <FileText className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-700 truncate">{doc.name}</p>
+                          <p className="text-xs text-slate-500 uppercase tracking-wider">{(doc.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => handleRemoveDocument(index)}
+                        className="text-slate-400 hover:text-red-600 p-2 shrink-0 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               
-              <div className="flex items-center gap-2">
-                <input 
-                  type="file" 
-                  accept="image/*"
-                  capture="environment"
-                  id="camera-upload"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-                <label 
-                  htmlFor="camera-upload"
-                  className={`bg-slate-50 border border-slate-200 text-slate-700 px-4 py-3 rounded hover:bg-slate-100 cursor-pointer flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors w-full border-dashed ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}
-                >
-                  <Camera className="w-4 h-4" /> 
-                  {uploadingImage ? 'Processing Image...' : 'Take or Upload Photo'}
-                </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    capture="environment"
+                    id="camera-upload"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <label 
+                    htmlFor="camera-upload"
+                    className={`bg-slate-50 border border-slate-200 text-slate-700 px-4 py-3 rounded hover:bg-slate-100 cursor-pointer flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors w-full border-dashed ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    <Camera className="w-4 h-4" /> 
+                    {uploadingImage ? 'Processing...' : 'Photo'}
+                  </label>
+                </div>
+                <div>
+                  <input 
+                    type="file" 
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+                    id="doc-upload"
+                    className="hidden"
+                    onChange={handleDocumentChange}
+                  />
+                  <label 
+                    htmlFor="doc-upload"
+                    className={`bg-slate-50 border border-slate-200 text-slate-700 px-4 py-3 rounded hover:bg-slate-100 cursor-pointer flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors w-full border-dashed ${uploadingDoc ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    <Paperclip className="w-4 h-4" /> 
+                    {uploadingDoc ? 'Uploading...' : 'Document'}
+                  </label>
+                </div>
               </div>
             </div>
           </div>

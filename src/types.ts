@@ -14,6 +14,14 @@ export interface Part {
   quantity: number;
 }
 
+export interface JobAttachment {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  data: string;
+}
+
 export type JobStatus = 'pending' | 'in_progress' | 'completed';
 
 export interface Job {
@@ -27,6 +35,7 @@ export interface Job {
   technicianName: string;
   status: JobStatus;
   photos: string[];
+  attachments?: JobAttachment[];
   partsUsed: Part[];
   resolutionNotes: string;
   createdBy: string;

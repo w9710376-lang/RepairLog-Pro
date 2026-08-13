@@ -4,7 +4,7 @@ import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Job, Part } from '../types';
-import { ArrowLeft, Plus, Trash2, Camera, X, Edit } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Camera, X, Edit, FileText, Paperclip, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { compressImage } from '../lib/imageUtils';
 
@@ -66,6 +66,48 @@ export default function JobDetail() {
     if (!job || !id) return;
     const updatedParts = job.partsUsed.filter((_, i) => i !== index);
     await handleUpdate('partsUsed', updatedParts);
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+
+  const handleDocumentChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!job || !id || !file) return;
+
+    if (file.size > 800 * 1024) {
+      alert("File is too large. Maximum size is 800KB for offline-first documents.");
+      e.target.value = '';
+      return;
+    }
+    
+    setUploadingDoc(true);
+    try {
+      const base64Str = await fileToBase64(file);
+      const newAttachment = {
+        id: Date.now().toString(),
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        size: file.size,
+        data: base64Str
+      };
+      const updatedAttachments = [...(job.attachments || []), newAttachment];
+      await handleUpdate('attachments', updatedAttachments);
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      alert("Failed to process document.");
+    } finally {
+      setUploadingDoc(false);
+      e.target.value = '';
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -294,37 +336,88 @@ export default function JobDetail() {
 
             <div>
               <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Attachments</h4>
-              <div className="grid grid-cols-3 gap-2">
-                {job.photos.map((url, index) => (
-                  <div 
-                    key={index} 
-                    className="relative aspect-square bg-slate-200 rounded-md border border-slate-300 flex items-center justify-center overflow-hidden group cursor-pointer"
-                    onClick={() => setSelectedImage(url)}
-                  >
-                    <img src={url} alt={`Job ${index}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  </div>
-                ))}
-              </div>
               
-              {job.photos.length === 0 && <p className="text-sm text-slate-500 mt-2">No photos attached.</p>}
+              {/* Image Grid */}
+              {job.photos.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {job.photos.map((url, index) => (
+                    <div 
+                      key={index} 
+                      className="relative aspect-square bg-slate-200 rounded-md border border-slate-300 flex items-center justify-center overflow-hidden group cursor-pointer"
+                      onClick={() => setSelectedImage(url)}
+                    >
+                      <img src={url} alt={`Job ${index}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Document List */}
+              {job.attachments && job.attachments.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  {job.attachments.map((doc, idx) => (
+                    <a 
+                      key={doc.id || idx}
+                      href={doc.data}
+                      download={doc.name}
+                      className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="bg-blue-100 text-blue-600 p-2 rounded-md shrink-0">
+                          <FileText className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-700 truncate">{doc.name}</p>
+                          <p className="text-xs text-slate-500 uppercase tracking-wider">{(doc.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                      </div>
+                      <div className="text-slate-400 group-hover:text-blue-600 px-2 shrink-0">
+                        <Download className="w-4 h-4" />
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
+              
+              {job.photos.length === 0 && (!job.attachments || job.attachments.length === 0) && (
+                <p className="text-sm text-slate-500 mt-2">No attachments.</p>
+              )}
 
               {canEdit && (
-                <div className="mt-4 flex items-center gap-2">
-                  <input 
-                    type="file" 
-                    accept="image/*"
-                    capture="environment"
-                    id="camera-upload-detail"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                  <label 
-                    htmlFor="camera-upload-detail"
-                    className={`bg-slate-50 border border-slate-200 text-slate-700 px-4 py-3 rounded hover:bg-slate-100 cursor-pointer flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors w-full border-dashed ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}
-                  >
-                    <Camera className="w-4 h-4" /> 
-                    {uploadingImage ? 'Processing Image...' : 'Take or Upload Photo'}
-                  </label>
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      capture="environment"
+                      id="camera-upload-detail"
+                      className="hidden"
+                      onChange={handleFileChange}
+                    />
+                    <label 
+                      htmlFor="camera-upload-detail"
+                      className={`bg-slate-50 border border-slate-200 text-slate-700 px-4 py-3 rounded hover:bg-slate-100 cursor-pointer flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors w-full border-dashed ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}
+                    >
+                      <Camera className="w-4 h-4" /> 
+                      {uploadingImage ? 'Processing...' : 'Photo'}
+                    </label>
+                  </div>
+                  <div>
+                    <input 
+                      type="file" 
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+                      id="doc-upload-detail"
+                      className="hidden"
+                      onChange={handleDocumentChange}
+                    />
+                    <label 
+                      htmlFor="doc-upload-detail"
+                      className={`bg-slate-50 border border-slate-200 text-slate-700 px-4 py-3 rounded hover:bg-slate-100 cursor-pointer flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider transition-colors w-full border-dashed ${uploadingDoc ? 'opacity-50 pointer-events-none' : ''}`}
+                    >
+                      <Paperclip className="w-4 h-4" /> 
+                      {uploadingDoc ? 'Uploading...' : 'Document'}
+                    </label>
+                  </div>
                 </div>
               )}
             </div>

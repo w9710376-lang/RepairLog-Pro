@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Job, JobStatus } from '../types';
 import { ArrowLeft, Plus, Trash2, Camera, X } from 'lucide-react';
 import { compressImage } from '../lib/imageUtils';
+import { format } from 'date-fns';
 
 export default function JobEdit() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +23,7 @@ export default function JobEdit() {
     equipment: '',
     location: '',
     status: 'pending' as JobStatus,
+    date: format(new Date(), 'yyyy-MM-dd'),
   });
 
   useEffect(() => {
@@ -43,6 +45,7 @@ export default function JobEdit() {
             equipment: data.equipment,
             location: data.location,
             status: data.status,
+            date: format(data.date || Date.now(), 'yyyy-MM-dd'),
           });
           setPhotos(data.photos || []);
         } else {
@@ -88,9 +91,19 @@ export default function JobEdit() {
     setLoading(true);
 
     try {
+      const parsedDate = new Date(formData.date);
+      // keep current time logic for the edited date
+      const now = new Date();
+      parsedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+
       const jobRef = doc(db, 'jobs', id);
       await updateDoc(jobRef, {
-        ...formData,
+        title: formData.title,
+        description: formData.description,
+        equipment: formData.equipment,
+        location: formData.location,
+        status: formData.status,
+        date: parsedDate.getTime(),
         photos: photos,
         updatedAt: Date.now(),
       });
@@ -149,17 +162,32 @@ export default function JobEdit() {
               />
             </div>
 
-            <div>
-              <label htmlFor="location" className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Location / Site</label>
-              <input
-                type="text"
-                id="location"
-                name="location"
-                required
-                value={formData.location}
-                onChange={handleChange}
-                className="w-full px-4 py-2 bg-slate-100 border-none rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="location" className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Location / Site</label>
+                <input
+                  type="text"
+                  id="location"
+                  name="location"
+                  required
+                  value={formData.location}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 bg-slate-100 border-none rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="date" className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Date Logged</label>
+                <input
+                  type="date"
+                  id="date"
+                  name="date"
+                  required
+                  value={formData.date}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 bg-slate-100 border-none rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
             </div>
 
             <div>
