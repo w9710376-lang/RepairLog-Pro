@@ -24,8 +24,17 @@ export interface JobAttachment {
 
 export type JobStatus = 'pending' | 'in_progress' | 'completed';
 
-export interface Job {
+export interface JobHistoryEvent {
   id: string;
+  jobId: string;
+  userId: string;
+  userName: string;
+  action: 'created' | 'updated' | 'status_changed' | 'deleted' | 'part_updated' | 'note_updated' | 'attachment_updated' | 'photo_updated';
+  details: string;
+  timestamp: number;
+}
+
+export interface Job {
   title: string;
   description: string;
   equipment: string;

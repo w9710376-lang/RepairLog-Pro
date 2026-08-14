@@ -13,7 +13,7 @@ export default function Reports() {
       try {
         const q = query(collection(db, 'jobs'), orderBy('createdAt', 'desc'));
         const snapshot = await getDocs(q);
-        setJobs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Job)));
+        setJobs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as Job)));
       } catch (error) {
         console.error("Error fetching jobs for reports", error);
       } finally {

@@ -7,6 +7,7 @@ import { Job, JobStatus } from '../types';
 import { ArrowLeft, Plus, Trash2, Camera, X } from 'lucide-react';
 import { compressImage } from '../lib/imageUtils';
 import { format } from 'date-fns';
+import { logJobHistory } from '../lib/history';
 
 export default function JobEdit() {
   const { id } = useParams<{ id: string }>();
@@ -105,6 +106,7 @@ export default function JobEdit() {
         photos: photos,
         updatedAt: Date.now(),
       });
+      await logJobHistory(id, profile.id, profile.name, 'updated', 'Job details updated');
       navigate(`/jobs/${id}`);
     } catch (error) {
       console.error("Error updating document: ", error);

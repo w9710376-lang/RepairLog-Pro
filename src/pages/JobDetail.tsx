@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { Job, Part } from '../types';
+import { Job, Part, JobHistoryEvent } from '../types';
 import { ArrowLeft, Plus, Trash2, Camera, X, Edit, FileText, Paperclip, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { compressImage } from '../lib/imageUtils';
+import { logJobHistory } from '../lib/history';
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
@@ -17,8 +18,25 @@ export default function JobDetail() {
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [history, setHistory] = useState<JobHistoryEvent[]>([]);
   
   const [newPart, setNewPart] = useState<Part>({ name: '', cost: 0, quantity: 1 });
+
+  const fetchHistory = async () => {
+    if (!id) return;
+    try {
+      const q = query(
+        collection(db, 'jobHistory'),
+        where('jobId', '==', id)
+      );
+      const snapshot = await getDocs(q);
+      const historyData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as JobHistoryEvent));
+      historyData.sort((a, b) => b.timestamp - a.timestamp);
+      setHistory(historyData);
+    } catch (error) {
+      console.error("Error fetching history", error);
+    }
+  };
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -27,7 +45,8 @@ export default function JobDetail() {
         const docRef = doc(db, 'jobs', id);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setJob({ id: docSnap.id, ...docSnap.data() } as Job);
+          setJob({ id: docSnap.id, ...docSnap.data() } as unknown as Job);
+          await fetchHistory();
         } else {
           navigate('/jobs');
         }
@@ -41,12 +60,34 @@ export default function JobDetail() {
   }, [id, navigate]);
 
   const handleUpdate = async (field: keyof Job, value: any) => {
-    if (!job || !id) return;
+    if (!job || !id || !profile) return;
     setSaving(true);
     try {
       const docRef = doc(db, 'jobs', id);
       await updateDoc(docRef, { [field]: value, updatedAt: Date.now() });
       setJob(prev => prev ? { ...prev, [field]: value } : null);
+      
+      let action: any = 'updated';
+      let details = `Updated ${field}`;
+      if (field === 'status') {
+        action = 'status_changed';
+        details = `Status changed to ${value}`;
+      } else if (field === 'partsUsed') {
+        action = 'part_updated';
+        details = `Parts list updated`;
+      } else if (field === 'resolutionNotes') {
+        action = 'note_updated';
+        details = `Resolution notes updated`;
+      } else if (field === 'attachments') {
+        action = 'attachment_updated';
+        details = `Attachments updated`;
+      } else if (field === 'photos') {
+        action = 'photo_updated';
+        details = `Photos updated`;
+      }
+      
+      await logJobHistory(id, profile.id, profile.name, action, details);
+      await fetchHistory();
     } catch (error) {
       console.error("Error updating job", error);
       alert("Update failed");
@@ -439,6 +480,45 @@ export default function JobDetail() {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+        <h3 className="text-sm font-bold text-slate-800 mb-6 uppercase tracking-wider">Change History</h3>
+        
+        {history.length === 0 ? (
+          <p className="text-sm text-slate-500">No history recorded yet.</p>
+        ) : (
+          <div className="space-y-6 relative before:absolute before:inset-0 before:ml-2.5 before:-translate-x-px md:before:ml-[5.5rem] md:before:translate-x-0 before:h-full before:w-0.5 before:bg-slate-200">
+            {history.map((event, idx) => (
+              <div key={event.id || idx} className="relative flex items-start gap-4 md:gap-6">
+                <div className="hidden md:block w-20 text-right shrink-0 mt-0.5">
+                  <div className="text-[10px] font-bold text-slate-500 leading-tight">
+                    {format(event.timestamp, 'MMM d')}
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    {format(event.timestamp, 'h:mm a')}
+                  </div>
+                </div>
+                
+                <div className="absolute left-0 md:static flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 border-2 border-white shrink-0 mt-0.5 z-10 shadow-sm">
+                  <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                </div>
+                
+                <div className="flex-1 ml-8 md:ml-0">
+                  <div className="md:hidden flex gap-2 items-center mb-1">
+                    <span className="text-[10px] font-bold text-slate-500">{format(event.timestamp, 'MMM d, yyyy h:mm a')}</span>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 text-sm">
+                    <div className="font-medium text-slate-800">{event.details}</div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      by <span className="font-semibold text-slate-700">{event.userName}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Fullscreen Image Modal */}

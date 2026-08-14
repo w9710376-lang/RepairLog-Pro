@@ -22,7 +22,7 @@ export default function Dashboard() {
         const q = query(jobsRef, orderBy('createdAt', 'desc'), limit(5));
         
         const snapshot = await getDocs(q);
-        const jobs = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as Record<string, any>) } as Job));
+        const jobs = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as Record<string, any>) } as unknown as Job));
         setRecentJobs(jobs);
 
         // Calculate simple stats

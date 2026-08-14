@@ -23,7 +23,7 @@ export default function JobsList() {
       const q = query(jobsRef, orderBy('createdAt', 'desc'));
       
       const snapshot = await getDocs(q);
-      const fetchedJobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Job));
+      const fetchedJobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as Job));
       setJobs(fetchedJobs);
     } catch (error) {
       console.error("Error fetching jobs", error);

@@ -9,6 +9,8 @@ import { Link } from 'react-router-dom';
 import { compressImage } from '../lib/imageUtils';
 import { format } from 'date-fns';
 
+import { logJobHistory } from '../lib/history';
+
 export default function JobCreate() {
   const { profile } = useAuth();
   const navigate = useNavigate();
@@ -132,6 +134,7 @@ export default function JobCreate() {
       };
 
       const docRef = await addDoc(collection(db, 'jobs'), newJob);
+      await logJobHistory(docRef.id, profile.id, profile.name, 'created', 'Job created');
       navigate(`/jobs/${docRef.id}`);
     } catch (error) {
       console.error("Error creating job", error);

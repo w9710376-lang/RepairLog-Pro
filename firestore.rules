@@ -29,5 +29,9 @@ service cloud.firestore {
       // Any authenticated user can create, update, delete jobs
       allow create, update, delete: if isAuthenticated();
     }
+    
+    match /jobHistory/{historyId} {
+      allow read, write: if isAuthenticated();
+    }
   }
 }
