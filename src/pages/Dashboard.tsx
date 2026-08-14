@@ -19,32 +19,18 @@ export default function Dashboard() {
       
       try {
         const jobsRef = collection(db, 'jobs');
-        let q;
-        
-        if (profile.role === 'admin') {
-          q = query(jobsRef, orderBy('createdAt', 'desc'), limit(5));
-        } else {
-          q = query(jobsRef, where('technicianId', '==', profile.id), orderBy('createdAt', 'desc'), limit(5));
-        }
+        const q = query(jobsRef, orderBy('createdAt', 'desc'), limit(5));
         
         const snapshot = await getDocs(q);
-        const jobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Job));
+        const jobs = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as Record<string, any>) } as Job));
         setRecentJobs(jobs);
 
-        // Calculate simple stats (this would normally be an aggregation or separate queries)
-        // For simplicity in this demo, we'll just count from a wider query if needed, 
-        // but let's just do an actual query for the counts if possible, or just mock it from the 5 jobs if it's too much.
-        // Let's do a simple full fetch for the user to get accurate stats
-        let statsQuery;
-        if (profile.role === 'admin') {
-          statsQuery = query(jobsRef);
-        } else {
-          statsQuery = query(jobsRef, where('technicianId', '==', profile.id));
-        }
+        // Calculate simple stats
+        const statsQuery = query(jobsRef);
         const statsSnap = await getDocs(statsQuery);
         let p = 0, i = 0, c = 0;
         statsSnap.forEach(doc => {
-          const s = doc.data().status;
+          const s = (doc.data() as Job).status;
           if (s === 'pending') p++;
           else if (s === 'in_progress') i++;
           else if (s === 'completed') c++;

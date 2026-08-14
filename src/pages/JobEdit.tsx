@@ -22,6 +22,7 @@ export default function JobEdit() {
     description: '',
     equipment: '',
     location: '',
+    technicianName: '',
     status: 'pending' as JobStatus,
     date: format(new Date(), 'yyyy-MM-dd'),
   });
@@ -34,16 +35,12 @@ export default function JobEdit() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data() as Job;
-          // Check permissions (only admin or the technician who created the job can edit)
-          if (profile.role !== 'admin' && data.technicianId !== profile.id) {
-            navigate('/jobs');
-            return;
-          }
           setFormData({
             title: data.title,
             description: data.description,
             equipment: data.equipment,
             location: data.location,
+            technicianName: data.technicianName || '',
             status: data.status,
             date: format(data.date || Date.now(), 'yyyy-MM-dd'),
           });
@@ -102,6 +99,7 @@ export default function JobEdit() {
         description: formData.description,
         equipment: formData.equipment,
         location: formData.location,
+        technicianName: formData.technicianName,
         status: formData.status,
         date: parsedDate.getTime(),
         photos: photos,
@@ -149,17 +147,32 @@ export default function JobEdit() {
               />
             </div>
             
-            <div>
-              <label htmlFor="equipment" className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Equipment / Machine</label>
-              <input
-                type="text"
-                id="equipment"
-                name="equipment"
-                required
-                value={formData.equipment}
-                onChange={handleChange}
-                className="w-full px-4 py-2 bg-slate-100 border-none rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="equipment" className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Equipment / Machine</label>
+                <input
+                  type="text"
+                  id="equipment"
+                  name="equipment"
+                  required
+                  value={formData.equipment}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 bg-slate-100 border-none rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="technicianName" className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Technician</label>
+                <input
+                  type="text"
+                  id="technicianName"
+                  name="technicianName"
+                  required
+                  value={formData.technicianName}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 bg-slate-100 border-none rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

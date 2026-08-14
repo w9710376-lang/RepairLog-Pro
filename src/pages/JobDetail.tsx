@@ -151,7 +151,7 @@ export default function JobDetail() {
   if (loading) return <div>Loading...</div>;
   if (!job) return <div>Job not found</div>;
 
-  const canEdit = profile?.role === 'admin' || job.technicianId === profile?.id;
+  const canEdit = true;
   const totalCost = job.partsUsed.reduce((sum, part) => sum + (part.cost * part.quantity), 0);
 
   return (

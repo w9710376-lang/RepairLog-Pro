@@ -26,17 +26,8 @@ service cloud.firestore {
       // Any authenticated user can view jobs
       allow read: if isAuthenticated();
       
-      // Admins can create, update, delete jobs
-      allow create: if isAuthenticated() && (isAdmin() || isTechnician());
-      allow update: if isAuthenticated() && (
-        isAdmin() || 
-        // Technician can update if they are assigned to it or created it
-        (isTechnician() && (resource.data.get('technicianId', '') == request.auth.uid || resource.data.get('createdBy', '') == request.auth.uid))
-      );
-      allow delete: if isAuthenticated() && (
-        isAdmin() || 
-        (isTechnician() && (resource.data.get('technicianId', '') == request.auth.uid || resource.data.get('createdBy', '') == request.auth.uid))
-      );
+      // Any authenticated user can create, update, delete jobs
+      allow create, update, delete: if isAuthenticated();
     }
   }
 }

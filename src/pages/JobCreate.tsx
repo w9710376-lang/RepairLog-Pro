@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -23,9 +23,16 @@ export default function JobCreate() {
     description: '',
     equipment: '',
     location: '',
+    technicianName: profile?.name || '',
     status: 'pending' as JobStatus,
     date: format(new Date(), 'yyyy-MM-dd'),
   });
+
+  useEffect(() => {
+    if (profile?.name && !formData.technicianName) {
+      setFormData(prev => ({ ...prev, technicianName: profile.name }));
+    }
+  }, [profile]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -114,7 +121,7 @@ export default function JobCreate() {
         status: formData.status,
         date: parsedDate.getTime(),
         technicianId: profile.id,
-        technicianName: profile.name,
+        technicianName: formData.technicianName || profile.name,
         photos: photos,
         attachments: attachments,
         partsUsed: [],
@@ -160,18 +167,34 @@ export default function JobCreate() {
               />
             </div>
             
-            <div>
-              <label htmlFor="equipment" className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Equipment / Machine</label>
-              <input
-                type="text"
-                id="equipment"
-                name="equipment"
-                required
-                value={formData.equipment}
-                onChange={handleChange}
-                className="w-full px-4 py-2 bg-slate-100 border-none rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="e.g. Carrier RTU-12"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="equipment" className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Equipment / Machine</label>
+                <input
+                  type="text"
+                  id="equipment"
+                  name="equipment"
+                  required
+                  value={formData.equipment}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 bg-slate-100 border-none rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="e.g. Carrier RTU-12"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="technicianName" className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Technician</label>
+                <input
+                  type="text"
+                  id="technicianName"
+                  name="technicianName"
+                  required
+                  value={formData.technicianName}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 bg-slate-100 border-none rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Technician Name"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

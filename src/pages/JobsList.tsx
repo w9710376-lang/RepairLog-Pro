@@ -20,11 +20,7 @@ export default function JobsList() {
     if (!profile) return;
     try {
       const jobsRef = collection(db, 'jobs');
-      let q = query(jobsRef, orderBy('createdAt', 'desc'));
-      
-      if (profile.role !== 'admin') {
-        q = query(jobsRef, where('technicianId', '==', profile.id), orderBy('createdAt', 'desc'));
-      }
+      const q = query(jobsRef, orderBy('createdAt', 'desc'));
       
       const snapshot = await getDocs(q);
       const fetchedJobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Job));
