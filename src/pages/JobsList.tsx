@@ -133,7 +133,6 @@ export default function JobsList() {
                     <td className="p-4">
                       <Link to={`/jobs/${job.id}`} className="block">
                         <p className="font-bold text-slate-800 text-sm">{job.title}</p>
-                        <p className="text-xs font-mono text-slate-400 mt-1">#{job.id.slice(0, 8).toUpperCase()}</p>
                         {profile?.role === 'admin' && (
                           <p className="text-xs text-slate-500 mt-1">Tech: {job.technicianName}</p>
                         )}
