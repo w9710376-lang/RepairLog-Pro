@@ -61,8 +61,8 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="flex-1 flex flex-col min-h-0 space-y-6">
+      <div className="shrink-0 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">
           Welcome back, {profile?.name?.split(' ')[0]}
         </h1>
@@ -74,7 +74,7 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="shrink-0 grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard 
           title="Pending Jobs" 
           value={stats.pending} 
@@ -95,8 +95,8 @@ export default function Dashboard() {
         />
       </div>
 
-      <section className="flex flex-col gap-4 overflow-hidden pt-4">
-        <div className="flex items-center justify-between">
+      <section className="flex-1 flex flex-col min-h-0 gap-4 pt-2">
+        <div className="flex items-center justify-between shrink-0">
           <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400">Recent Jobs</h2>
           <Link to="/jobs" className="text-xs text-blue-600 font-bold hover:underline uppercase">
             View all
@@ -104,11 +104,11 @@ export default function Dashboard() {
         </div>
         
         {recentJobs.length === 0 ? (
-          <div className="p-6 text-center text-slate-500 bg-white rounded border border-slate-200">
+          <div className="p-6 text-center text-slate-500 bg-white rounded border border-slate-200 shrink-0">
             No recent jobs found.
           </div>
         ) : (
-          <div className="flex flex-col gap-3 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto flex flex-col gap-3 pr-2 custom-scrollbar">
             {recentJobs.map(job => (
               <Link key={job.id} to={`/jobs/${job.id}`} className={`block p-4 bg-white border-l-4 shadow-sm rounded flex flex-col gap-2 hover:bg-slate-50 transition-colors
                 ${job.status === 'completed' ? 'border-emerald-500 opacity-70' : 

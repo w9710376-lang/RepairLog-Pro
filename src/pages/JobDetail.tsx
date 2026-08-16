@@ -196,7 +196,7 @@ export default function JobDetail() {
   const totalCost = job.partsUsed.reduce((sum, part) => sum + (part.cost * part.quantity), 0);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl w-full mx-auto space-y-6 flex-1 overflow-y-auto custom-scrollbar pr-2 pb-8 h-full">
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         <div className="p-6 border-b border-slate-100 flex justify-between items-center">
           <div className="flex items-center gap-4">

@@ -145,7 +145,7 @@ export default function JobCreate() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl w-full mx-auto space-y-6 flex-1 overflow-y-auto custom-scrollbar pr-2 pb-8 h-full">
       <div className="flex items-center gap-4">
         <Link to="/jobs" className="p-2 bg-slate-100 hover:bg-slate-200 rounded transition-colors">
           <ArrowLeft className="w-5 h-5 text-slate-600" />

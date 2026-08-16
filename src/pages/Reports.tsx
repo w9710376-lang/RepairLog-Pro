@@ -57,10 +57,10 @@ export default function Reports() {
   const barData = Object.values(techStats);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">Admin Reports</h1>
+    <div className="space-y-6 flex-1 overflow-y-auto custom-scrollbar pr-2 pb-8 h-full">
+      <h1 className="text-2xl font-bold text-slate-900 shrink-0">Admin Reports</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
         <div className="bg-white p-6 rounded shadow-sm border border-slate-200">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Jobs</p>
           <p className="text-3xl font-bold text-slate-900 mt-2">{jobs.length}</p>
