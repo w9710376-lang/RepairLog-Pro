@@ -11,7 +11,7 @@ export default function Dashboard() {
   const { profile } = useAuth();
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [stats, setStats] = useState({ pending: 0, inProgress: 0, completed: 0 });
-  const [topEquipments, setTopEquipments] = useState<{name: string, count: number, jobs: {id: string, title: string, status: string}[]}[]>([]);
+  const [summaryEquipments, setSummaryEquipments] = useState<{name: string, count: number, jobs: {id: string, title: string, status: string}[]}[]>([]);
   const [expandedEquip, setExpandedEquip] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -21,7 +21,7 @@ export default function Dashboard() {
       
       try {
         const jobsRef = collection(db, 'jobs');
-        const q = query(jobsRef, orderBy('createdAt', 'desc'), limit(5));
+        const q = query(jobsRef, orderBy('createdAt', 'desc'));
         
         const snapshot = await getDocs(q);
         const jobs = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as Record<string, any>) } as unknown as Job));
@@ -51,11 +51,10 @@ export default function Dashboard() {
         
         const sortedEquips = Object.entries(equipMap)
           .map(([name, val]) => ({ name, count: val.count, jobs: val.jobs }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 5);
+          .sort((a, b) => b.count - a.count);
           
         setStats({ pending: p, inProgress: i, completed: c });
-        setTopEquipments(sortedEquips);
+        setSummaryEquipments(sortedEquips);
       } catch (error) {
         console.error("Error fetching dashboard data", error);
       } finally {
@@ -118,9 +117,9 @@ export default function Dashboard() {
       <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0 pt-2">
         <section className="flex-[2] flex flex-col min-h-0 gap-4">
           <div className="flex items-center justify-between shrink-0">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400">Recent Jobs</h2>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400">All Jobs</h2>
             <Link to="/jobs" className="text-xs text-blue-600 font-bold hover:underline uppercase">
-              View all
+              Go to Jobs list
             </Link>
           </div>
           
@@ -154,14 +153,14 @@ export default function Dashboard() {
         </section>
 
         <aside className="flex-1 flex flex-col min-h-0 gap-4">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400 shrink-0">Top 5 Equipment</h2>
-          {topEquipments.length === 0 ? (
+          <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400 shrink-0">Summary Equipment</h2>
+          {summaryEquipments.length === 0 ? (
             <div className="p-6 text-center text-slate-500 bg-white rounded border border-slate-200 shrink-0">
               No equipment data found.
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto flex flex-col gap-3 pr-2 custom-scrollbar">
-              {topEquipments.map((item, index) => {
+              {summaryEquipments.map((item, index) => {
                 const isExpanded = expandedEquip === item.name;
                 return (
                 <div key={item.name} className="bg-white rounded border border-slate-200 shadow-sm flex flex-col overflow-hidden">
@@ -170,8 +169,8 @@ export default function Dashboard() {
                     className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors w-full text-left"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
-                        #{index + 1}
+                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                        <CheckCircle className="w-4 h-4" />
                       </div>
                       <span className="font-bold text-slate-800 text-sm">{item.name}</span>
                     </div>
