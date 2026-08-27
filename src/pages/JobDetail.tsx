@@ -174,9 +174,13 @@ export default function JobDetail() {
       }));
       const updatedAttachments = [...(job.attachments || []), ...newAttachments];
       await handleUpdate('attachments', updatedAttachments);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading document:", error);
-      alert("Failed to process document.");
+      if (error?.message?.includes("too large") || error?.code === "resource-exhausted") {
+        alert("The total size of photos and documents exceeds the database limit (1MB). Please remove some files.");
+      } else {
+        alert("Failed to process document.");
+      }
     } finally {
       setUploadingDoc(false);
       e.target.value = '';
@@ -192,9 +196,13 @@ export default function JobDetail() {
       const newPhotos = await Promise.all(files.map(compressImage));
       const updatedPhotos = [...job.photos, ...newPhotos];
       await handleUpdate('photos', updatedPhotos);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error compressing image:", error);
-      alert("Failed to process image.");
+      if (error?.message?.includes("too large") || error?.code === "resource-exhausted") {
+        alert("The total size of photos and documents exceeds the database limit (1MB). Please remove some files.");
+      } else {
+        alert("Failed to process image.");
+      }
     } finally {
       setUploadingImage(false);
       e.target.value = '';

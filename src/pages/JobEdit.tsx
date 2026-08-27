@@ -108,9 +108,13 @@ export default function JobEdit() {
       });
       await logJobHistory(id, profile.id, profile.name, 'updated', 'Job details updated');
       navigate(`/jobs/${id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating document: ", error);
-      alert("Failed to update job.");
+      if (error?.message?.includes("too large") || error?.code === "resource-exhausted") {
+        alert("The total size of photos and documents exceeds the database limit (1MB). Please remove some files.");
+      } else {
+        alert("Failed to update job.");
+      }
     } finally {
       setLoading(false);
     }

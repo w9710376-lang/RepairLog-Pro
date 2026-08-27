@@ -145,9 +145,13 @@ export default function JobCreate() {
       const docRef = await addDoc(collection(db, 'jobs'), newJob);
       await logJobHistory(docRef.id, profile.id, profile.name, 'created', 'Job created');
       navigate(`/jobs/${docRef.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating job", error);
-      alert("Failed to create job.");
+      if (error?.message?.includes("too large") || error?.code === "resource-exhausted") {
+        alert("The total size of photos and documents exceeds the database limit (1MB). Please remove some files.");
+      } else {
+        alert("Failed to create job.");
+      }
     } finally {
       setLoading(false);
     }
