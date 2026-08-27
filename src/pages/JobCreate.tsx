@@ -54,8 +54,8 @@ export default function JobCreate() {
     if (files.length === 0) return;
 
     const validFiles = files.filter(file => {
-      if (file.size > 800 * 1024) {
-        alert(`File ${file.name} is too large. Maximum size is 800KB for offline-first documents.`);
+      if (file.size > 500 * 1024) {
+        alert(`File ${file.name} is too large. Maximum size is 500KB for offline-first documents.`);
         return false;
       }
       return true;

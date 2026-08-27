@@ -88,9 +88,13 @@ export default function JobDetail() {
       
       await logJobHistory(id, profile.id, profile.name, action, details);
       await fetchHistory();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating job", error);
-      alert("Update failed");
+      if (error?.message?.includes("too large") || error?.code === "resource-exhausted") {
+        alert("The total size of photos and documents exceeds the database limit (1MB). Please remove some files.");
+      } else {
+        alert("Update failed: " + error.message);
+      }
     } finally {
       setSaving(false);
     }
@@ -148,8 +152,8 @@ export default function JobDetail() {
     if (!job || !id || files.length === 0) return;
 
     const validFiles = files.filter(file => {
-      if (file.size > 800 * 1024) {
-        alert("File " + file.name + " is too large. Maximum size is 800KB.");
+      if (file.size > 500 * 1024) {
+        alert("File " + file.name + " is too large. Maximum size is 500KB.");
         return false;
       }
       return true;
