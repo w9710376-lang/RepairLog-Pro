@@ -50,26 +50,35 @@ export default function JobCreate() {
   };
 
   const handleDocumentChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    if (file.size > 800 * 1024) {
-      alert("File is too large. Maximum size is 800KB for offline-first documents.");
+    const validFiles = files.filter(file => {
+      if (file.size > 800 * 1024) {
+        alert(`File ${file.name} is too large. Maximum size is 800KB for offline-first documents.`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) {
       e.target.value = '';
       return;
     }
     
     setUploadingDoc(true);
     try {
-      const base64Str = await fileToBase64(file);
-      const newAttachment = {
-        id: Date.now().toString(),
-        name: file.name,
-        type: file.type || 'application/octet-stream',
-        size: file.size,
-        data: base64Str
-      };
-      setAttachments(prev => [...prev, newAttachment]);
+      const newAttachments = await Promise.all(validFiles.map(async (file, index) => {
+        const base64Str = await fileToBase64(file);
+        return {
+          id: Date.now().toString() + index,
+          name: file.name,
+          type: file.type || 'application/octet-stream',
+          size: file.size,
+          data: base64Str
+        };
+      }));
+      setAttachments(prev => [...prev, ...newAttachments]);
     } catch (error) {
       console.error("Error uploading document:", error);
       alert("Failed to process document.");
@@ -84,13 +93,13 @@ export default function JobCreate() {
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
     
     setUploadingImage(true);
     try {
-      const base64Str = await compressImage(file);
-      setPhotos(prev => [...prev, base64Str]);
+      const newPhotos = await Promise.all(files.map(compressImage));
+      setPhotos(prev => [...prev, ...newPhotos]);
     } catch (error) {
       console.error("Error compressing image:", error);
       alert("Failed to process image.");
@@ -274,9 +283,9 @@ export default function JobCreate() {
                       <button 
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleRemovePhoto(index); }}
-                        className="absolute top-1.5 right-1.5 bg-white/90 p-1.5 rounded text-slate-600 hover:bg-red-50 hover:text-red-600 shadow-sm opacity-0 group-hover:opacity-100 transition-all"
+                        className="absolute top-1.5 right-1.5 bg-white p-1.5 rounded-full text-slate-600 hover:bg-red-50 hover:text-red-600 shadow-md opacity-100 transition-all border border-slate-200"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4 text-red-500" />
                       </button>
                     </div>
                   ))}
@@ -317,7 +326,7 @@ export default function JobCreate() {
                   <input 
                     type="file" 
                     accept="image/*"
-                    capture="environment"
+                    multiple
                     id="camera-upload"
                     className="hidden"
                     onChange={handleFileChange}
@@ -334,6 +343,7 @@ export default function JobCreate() {
                   <input 
                     type="file" 
                     accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+                    multiple
                     id="doc-upload"
                     className="hidden"
                     onChange={handleDocumentChange}

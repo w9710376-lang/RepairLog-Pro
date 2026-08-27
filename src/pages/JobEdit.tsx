@@ -63,13 +63,13 @@ export default function JobEdit() {
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
     
     setUploadingImage(true);
     try {
-      const base64Str = await compressImage(file);
-      setPhotos(prev => [...prev, base64Str]);
+      const newPhotos = await Promise.all(files.map(compressImage));
+      setPhotos(prev => [...prev, ...newPhotos]);
     } catch (error) {
       console.error("Error compressing image:", error);
       alert("Failed to process image.");
@@ -248,9 +248,9 @@ export default function JobEdit() {
                       <button 
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleRemovePhoto(index); }}
-                        className="absolute top-1.5 right-1.5 bg-white/90 p-1.5 rounded text-slate-600 hover:bg-red-50 hover:text-red-600 shadow-sm opacity-0 group-hover:opacity-100 transition-all"
+                        className="absolute top-1.5 right-1.5 bg-white p-1.5 rounded-full text-slate-600 hover:bg-red-50 hover:text-red-600 shadow-md opacity-100 transition-all border border-slate-200"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4 text-red-500" />
                       </button>
                     </div>
                   ))}
@@ -261,7 +261,7 @@ export default function JobEdit() {
                 <input 
                   type="file" 
                   accept="image/*"
-                  capture="environment"
+                  multiple
                   id="camera-upload-edit"
                   className="hidden"
                   onChange={handleFileChange}
