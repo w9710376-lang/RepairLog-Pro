@@ -8,7 +8,7 @@ export const compressImage = (file: File): Promise<string> => {
       img.onload = () => {
         const canvas = document.createElement('canvas');
         // Max dimension for the image to keep base64 string size small for Firestore
-        const MAX_SIZE = 800;
+        const MAX_SIZE = 400;
         let width = img.width;
         let height = img.height;
 
@@ -30,7 +30,7 @@ export const compressImage = (file: File): Promise<string> => {
         ctx?.drawImage(img, 0, 0, width, height);
         
         // Compress to JPEG with 0.5 quality
-        resolve(canvas.toDataURL('image/jpeg', 0.5));
+        resolve(canvas.toDataURL('image/webp', 0.4));
       };
       img.onerror = (error) => reject(error);
     };

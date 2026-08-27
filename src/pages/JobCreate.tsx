@@ -54,8 +54,8 @@ export default function JobCreate() {
     if (files.length === 0) return;
 
     const validFiles = files.filter(file => {
-      if (file.size > 500 * 1024) {
-        alert(`File ${file.name} is too large. Maximum size is 500KB for offline-first documents.`);
+      if (file.size > 250 * 1024) {
+        alert(`File ${file.name} is too large. Maximum size is 250KB for offline-first documents.`);
         return false;
       }
       return true;
@@ -142,12 +142,17 @@ export default function JobCreate() {
         updatedAt: Date.now(),
       };
 
+      if (JSON.stringify(newJob).length > 900000) {
+        alert("The total size of this job's data exceeds the 1MB limit. Please remove some photos or documents before saving.");
+        setLoading(false);
+        return;
+      }
       const docRef = await addDoc(collection(db, 'jobs'), newJob);
       await logJobHistory(docRef.id, profile.id, profile.name, 'created', 'Job created');
       navigate(`/jobs/${docRef.id}`);
     } catch (error: any) {
       console.error("Error creating job", error);
-      if (error?.message?.includes("too large") || error?.code === "resource-exhausted") {
+      if (error?.message?.includes("too large") || error?.message?.includes("exceeds the maximum allowed size") || error?.message?.includes("exceeds") || error?.code === "resource-exhausted") {
         alert("The total size of photos and documents exceeds the database limit (1MB). Please remove some files.");
       } else {
         alert("Failed to create job.");

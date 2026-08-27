@@ -61,6 +61,12 @@ export default function JobDetail() {
 
   const handleUpdate = async (field: keyof Job, value: any) => {
     if (!job || !id || !profile) return;
+    
+    const tempJob = { ...job, [field]: value };
+    if (JSON.stringify(tempJob).length > 900000) {
+      alert("Adding this item would exceed the 1MB database limit. Please remove some existing photos or documents first.");
+      throw new Error("Size limit exceeded");
+    }
     setSaving(true);
     try {
       const docRef = doc(db, 'jobs', id);
@@ -89,8 +95,8 @@ export default function JobDetail() {
       await logJobHistory(id, profile.id, profile.name, action, details);
       await fetchHistory();
     } catch (error: any) {
-      console.error("Error updating job", error);
-      if (error?.message?.includes("too large") || error?.code === "resource-exhausted") {
+      if (!(error?.message?.includes("too large") || error?.message?.includes("exceeds") || error?.message?.includes("Size limit exceeded"))) { console.error("Error updating job", error); }
+      if (error?.message?.includes("too large") || error?.message?.includes("exceeds the maximum allowed size") || error?.message?.includes("exceeds") || error?.code === "resource-exhausted") {
         alert("The total size of photos and documents exceeds the database limit (1MB). Please remove some files.");
       } else {
         alert("Update failed: " + error.message);
@@ -152,8 +158,8 @@ export default function JobDetail() {
     if (!job || !id || files.length === 0) return;
 
     const validFiles = files.filter(file => {
-      if (file.size > 500 * 1024) {
-        alert("File " + file.name + " is too large. Maximum size is 500KB.");
+      if (file.size > 250 * 1024) {
+        alert("File " + file.name + " is too large. Maximum size is 250KB.");
         return false;
       }
       return true;
@@ -179,8 +185,8 @@ export default function JobDetail() {
       const updatedAttachments = [...(job.attachments || []), ...newAttachments];
       await handleUpdate('attachments', updatedAttachments);
     } catch (error: any) {
-      console.error("Error uploading document:", error);
-      if (error?.message?.includes("too large") || error?.code === "resource-exhausted") {
+      if (!(error?.message?.includes("too large") || error?.message?.includes("exceeds") || error?.message?.includes("Size limit exceeded"))) { console.error("Error uploading document:", error); }
+      if (error?.message?.includes("too large") || error?.message?.includes("exceeds the maximum allowed size") || error?.message?.includes("exceeds") || error?.code === "resource-exhausted") {
         alert("The total size of photos and documents exceeds the database limit (1MB). Please remove some files.");
       } else {
         alert("Failed to process document.");
@@ -201,8 +207,8 @@ export default function JobDetail() {
       const updatedPhotos = [...job.photos, ...newPhotos];
       await handleUpdate('photos', updatedPhotos);
     } catch (error: any) {
-      console.error("Error compressing image:", error);
-      if (error?.message?.includes("too large") || error?.code === "resource-exhausted") {
+      if (!(error?.message?.includes("too large") || error?.message?.includes("exceeds") || error?.message?.includes("Size limit exceeded"))) { console.error("Error compressing image:", error); }
+      if (error?.message?.includes("too large") || error?.message?.includes("exceeds the maximum allowed size") || error?.message?.includes("exceeds") || error?.code === "resource-exhausted") {
         alert("The total size of photos and documents exceeds the database limit (1MB). Please remove some files.");
       } else {
         alert("Failed to process image.");

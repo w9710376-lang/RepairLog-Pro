@@ -110,7 +110,7 @@ export default function JobEdit() {
       navigate(`/jobs/${id}`);
     } catch (error: any) {
       console.error("Error updating document: ", error);
-      if (error?.message?.includes("too large") || error?.code === "resource-exhausted") {
+      if (error?.message?.includes("too large") || error?.message?.includes("exceeds the maximum allowed size") || error?.message?.includes("exceeds") || error?.code === "resource-exhausted") {
         alert("The total size of photos and documents exceeds the database limit (1MB). Please remove some files.");
       } else {
         alert("Failed to update job.");
