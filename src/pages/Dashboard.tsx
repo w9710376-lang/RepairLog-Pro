@@ -163,10 +163,10 @@ export default function Dashboard() {
               {summaryEquipments.map((item, index) => {
                 const isExpanded = expandedEquip === item.name;
                 return (
-                <div key={item.name} className="bg-white rounded border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                <div key={item.name} className="bg-white rounded border border-slate-200 shadow-sm flex flex-col overflow-hidden shrink-0">
                   <button 
                     onClick={() => setExpandedEquip(isExpanded ? null : item.name)}
-                    className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors w-full text-left"
+                    className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors w-full text-left shrink-0"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
