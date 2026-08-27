@@ -424,9 +424,9 @@ export default function JobDetail() {
                         <button 
                           type="button"
                           onClick={(e) => { e.stopPropagation(); handleRemovePhoto(index); }}
-                          className="absolute top-1.5 right-1.5 bg-white p-1.5 rounded-full text-slate-600 hover:bg-red-50 hover:text-red-600 shadow-md opacity-100 transition-all border border-slate-200"
+                          className="absolute top-1.5 right-1.5 bg-white p-1 rounded-full text-slate-600 hover:bg-red-50 hover:text-red-600 shadow-sm opacity-100 transition-all border border-slate-200"
                         >
-                          <Trash2 className="w-4 h-4 text-red-500" />
+                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
                         </button>
                       )}
                     </div>
